@@ -832,7 +832,7 @@ const BASE_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
 // ============================================================
 let productos = [];
 let movimientos = [];
-let categorias = ['Apple', 'Salud', 'Marketing', 'Operativo', 'Otro'];
+let categorias = ['Apple', 'Salud', 'JBL', 'Marketing', 'Operativo', 'Otro'];
 let catActiva = 'Todos';
 let editMovIdx = null;
 let catChartInstance = null;
@@ -915,15 +915,40 @@ async function loadAll() {
   }
 }
 
+const PRODUCTOS_INICIALES = [
+  { num:1, nombre:'Cubo Cargador 20W', categoria:'Apple', precio:25, stock:2, min:1 },
+  { num:2, nombre:'Cable C – C', categoria:'Apple', precio:25, stock:4, min:1 },
+  { num:3, nombre:'Cable C – Lightning', categoria:'Apple', precio:25, stock:0, min:1 },
+  { num:4, nombre:'AirPods Pro 2da Generación', categoria:'Apple', precio:75, stock:0, min:1 },
+  { num:5, nombre:'Pack 30 Tiras Nasales', categoria:'Salud', precio:0, stock:0, min:1 },
+  { num:6, nombre:'JBL - Flip 7', categoria:'JBL', precio:80, stock:2, min:1 },
+  { num:7, nombre:'JBL - BOMBOX MINI 4', categoria:'JBL', precio:99, stock:1, min:1 },
+  { num:8, nombre:'Airpods Pro 3era Generación ANC', categoria:'Apple', precio:80, stock:2, min:1 },
+  { num:9, nombre:'Airpods 4 ANC', categoria:'Apple', precio:80, stock:3, min:1 },
+  { num:10, nombre:'Lip Gloss Dup Dior', categoria:'Salud', precio:10, stock:9, min:5 },
+  { num:11, nombre:'Vinchas', categoria:'Salud', precio:8, stock:4, min:1 },
+  { num:12, nombre:'Mascarillas', categoria:'Salud', precio:5, stock:44, min:20 },
+  { num:13, nombre:'Lapiz para Ojo', categoria:'Salud', precio:2.50, stock:12, min:5 },
+  { num:14, nombre:'Labial Mate', categoria:'Salud', precio:8, stock:7, min:5 },
+  { num:15, nombre:'Rubor', categoria:'Salud', precio:8, stock:7, min:5 },
+  { num:16, nombre:'Balsamo de Fresa', categoria:'Salud', precio:8.50, stock:9, min:5 },
+  { num:17, nombre:'Deliniador', categoria:'Salud', precio:8, stock:8, min:4 },
+  { num:18, nombre:'Parches de Limpieza', categoria:'Salud', precio:8, stock:8, min:4 },
+  { num:19, nombre:'Perfiladores', categoria:'Salud', precio:5, stock:20, min:10 },
+  { num:20, nombre:'Cable C - C (Trenzados)', categoria:'Apple', precio:25, stock:6, min:1 },
+];
+
 async function loadProductos() {
   const rows = await sheetsGet("'📦 Stock'!A4:G50");
   productos = [];
+  let hasSheetData = false;
   for (const row of rows) {
     if (!row[1] || row[1].startsWith('VALOR')) continue;
     const precio = parsePrice(row[3]);
     const stock = parseInt(row[4]) || 0;
     const min = parseInt(row[5]) || 1;
     if (row[1] && !isNaN(precio)) {
+      hasSheetData = true;
       productos.push({
         num: row[0] || '',
         nombre: row[1] || '',
@@ -933,12 +958,21 @@ async function loadProductos() {
         min,
         rowNum: productos.length + 5
       });
-      // Agregar categorías no conocidas
       if (row[2] && !categorias.includes(row[2])) {
         categorias.push(row[2]);
         saveCatsToStorage();
       }
     }
+  }
+  // Si el sheet está vacío, usar datos iniciales
+  if (!hasSheetData) {
+    productos = PRODUCTOS_INICIALES.map((p, i) => ({ ...p, rowNum: i + 5 }));
+    productos.forEach(p => {
+      if (!categorias.includes(p.categoria)) {
+        categorias.push(p.categoria);
+        saveCatsToStorage();
+      }
+    });
   }
 }
 
@@ -997,12 +1031,26 @@ function renderCatTabs() {
   container.insertBefore(allBtn, addBtn);
 
   categorias.forEach(cat => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;align-items:center;gap:2px;';
+
     const btn = document.createElement('button');
     btn.className = 'cat-tab' + (catActiva === cat ? ' active' : '');
     btn.dataset.cat = cat;
     btn.textContent = cat;
     btn.onclick = function() { selectCat(this); };
-    container.insertBefore(btn, addBtn);
+
+    const delBtn = document.createElement('button');
+    delBtn.title = 'Eliminar categoría';
+    delBtn.style.cssText = 'background:none;border:none;cursor:pointer;color:var(--text3);padding:2px 3px;font-size:14px;line-height:1;border-radius:4px;display:flex;align-items:center;';
+    delBtn.innerHTML = '×';
+    delBtn.onmouseenter = () => delBtn.style.color = 'var(--red)';
+    delBtn.onmouseleave = () => delBtn.style.color = 'var(--text3)';
+    delBtn.onclick = (e) => { e.stopPropagation(); confirmarEliminarCat(cat); };
+
+    wrap.appendChild(btn);
+    wrap.appendChild(delBtn);
+    container.insertBefore(wrap, addBtn);
   });
 }
 
@@ -1048,9 +1096,12 @@ function renderInventario() {
       <td class="td-num td-bold">${p.stock}</td>
       <td class="td-num" style="color:var(--text3)">${p.min}</td>
       <td><span class="badge ${estadoClass}">${estado}</span></td>
-      <td>
+      <td style="display:flex;gap:4px;">
         <button class="btn btn-ghost btn-icon btn-sm" onclick="openEditProductModal(${productos.indexOf(p)})" title="Editar">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn btn-ghost btn-icon btn-sm" onclick="confirmarEliminarProducto(${productos.indexOf(p)})" title="Eliminar" style="color:var(--red);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
         </button>
       </td>
     </tr>`;
@@ -1388,8 +1439,44 @@ async function eliminarMovimiento() {
 }
 
 // ============================================================
-// CATEGORÍAS
+// ELIMINAR PRODUCTO
 // ============================================================
+async function confirmarEliminarProducto(idx) {
+  const p = productos[idx];
+  if (!confirm(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`)) return;
+  try {
+    await sheetsUpdate(`'📦 Stock'!A${p.rowNum}:G${p.rowNum}`, [['','','','','','','']]);
+    showToast(`"${p.nombre}" eliminado ✓`, 'success');
+    await loadProductos();
+    renderCatTabs();
+    renderInventario();
+    updateCatSelects();
+    filterProductosByCat();
+    updateStockProducto();
+  } catch(e) {
+    showToast('Error al eliminar producto', 'error');
+  }
+}
+
+// ============================================================
+// ELIMINAR CATEGORÍA
+// ============================================================
+function confirmarEliminarCat(cat) {
+  const enUso = productos.some(p => p.categoria === cat);
+  if (enUso) {
+    showToast(`No puedes eliminar "${cat}" porque tiene productos asignados`, 'warning');
+    return;
+  }
+  if (!confirm(`¿Eliminar la categoría "${cat}"?`)) return;
+  categorias = categorias.filter(c => c !== cat);
+  saveCatsToStorage();
+  if (catActiva === cat) catActiva = 'Todos';
+  renderCatTabs();
+  updateCatSelects();
+  showToast(`Categoría "${cat}" eliminada ✓`, 'success');
+}
+
+
 function openAddCatModal() {
   document.getElementById('newCatName').value = '';
   openModal('modalCat');
