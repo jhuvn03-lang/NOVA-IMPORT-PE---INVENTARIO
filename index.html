@@ -879,26 +879,24 @@ async function sheetsGet(range) {
   return d.values || [];
 }
 
-async function sheetsAppend(range, values) {
-  const url = `${BASE_URL}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&key=${API_KEY}`;
-  const r = await fetch(url, {
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwq8I9PcMwurkwSTqGavjh_cL2dG2MCHh6NcJIfPzP9UNCDyYnMPWA4QhWQMD6yMOSd/exec';
+
+async function scriptPost(data) {
+  const r = await fetch(SCRIPT_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values })
+    body: JSON.stringify(data)
   });
   if (!r.ok) throw new Error('Error al guardar');
   return r.json();
 }
 
+async function sheetsAppend(range, values) {
+  const sheet = range.includes('Movimientos') ? '💰 Movimientos' : '📦 Stock';
+  return scriptPost({ action: 'append', sheet, values: values[0] });
+}
+
 async function sheetsUpdate(range, values) {
-  const url = `${BASE_URL}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED&key=${API_KEY}`;
-  const r = await fetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ values })
-  });
-  if (!r.ok) throw new Error('Error al actualizar');
-  return r.json();
+  return scriptPost({ action: 'update', range, values });
 }
 
 // ============================================================
