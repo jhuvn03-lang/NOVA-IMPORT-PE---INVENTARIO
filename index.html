@@ -896,7 +896,12 @@ async function sheetsAppend(range, values) {
 }
 
 async function sheetsUpdate(range, values) {
-  return scriptPost({ action: 'update', range, values });
+  // Extraer nombre de hoja y número de fila del range
+  const sheetMatch = range.match(/'([^']+)'/);
+  const rowMatch = range.match(/[A-Z](\d+)/);
+  const sheet = sheetMatch ? sheetMatch[1] : '📦 Stock';
+  const rowNum = rowMatch ? parseInt(rowMatch[1]) : 1;
+  return scriptPost({ action: 'update', sheet, rowNum, values });
 }
 
 // ============================================================
@@ -977,7 +982,9 @@ async function loadProductos() {
 async function loadMovimientos() {
   const rows = await sheetsGet("'💰 Movimientos'!A4:H100");
   movimientos = [];
+  let sheetRowIndex = 4; // empieza en fila 4 (header está en fila 3)
   for (const row of rows) {
+    sheetRowIndex++;
     if (!row[0] || !row[1]) continue;
     if (row[1] !== 'VENTA' && row[1] !== 'COMPRA' && row[1] !== 'GASTO') continue;
     movimientos.push({
@@ -989,7 +996,7 @@ async function loadMovimientos() {
       precio: parsePrice(row[5]),
       total: parsePrice(row[6]),
       notas: row[7] || '',
-      rowNum: movimientos.length + 5
+      rowNum: sheetRowIndex
     });
   }
   movimientos.reverse();
@@ -1431,7 +1438,7 @@ async function confirmarEliminarMov(idx) {
   const m = movimientos[idx];
   if (!confirm(`¿Eliminar este movimiento?\n${m.tipo} — ${m.descripcion} — S/ ${m.total.toFixed(2)}`)) return;
   try {
-    await scriptPost({ action: 'update', sheet: '💰 Movimientos', range: `'💰 Movimientos'!A${m.rowNum}:H${m.rowNum}`, values: [['','','','','','','','']] });
+    await scriptPost({ action: 'update', sheet: '💰 Movimientos', rowNum: m.rowNum, values: [['','','','','','','','']] });
     showToast('Movimiento eliminado ✓', 'success');
     await loadMovimientos();
     renderMovimientos();
