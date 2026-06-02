@@ -182,7 +182,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:var(--surface2)}
         <div class="form-group"><label class="form-label">Fecha</label><input type="date" class="form-input" id="regFecha"></div>
         <div class="form-group"><label class="form-label">Tipo</label><select class="form-select" id="regTipo" onchange="onTipoChange()"><option value="VENTA">VENTA</option><option value="COMPRA">COMPRA</option><option value="GASTO">GASTO</option></select></div>
         <div class="form-group"><label class="form-label">Categoría</label><select class="form-select" id="regCat" onchange="filterProductosByCat()"></select></div>
-        <div class="form-group form-full"><label class="form-label">Producto / Descripción</label><select class="form-select" id="regProducto" onchange="onProductoChange()"><option value="">— Seleccionar producto —</option></select></div>
+        <div class="form-group form-full"><label class="form-label" id="regProductoLabel">Producto / Descripción</label><select class="form-select" id="regProducto" onchange="onProductoChange()"><option value="">— Seleccionar producto —</option></select><input type="text" class="form-input" id="regDescGasto" placeholder="Ej: Publicidad Instagram, Empaques..." style="display:none;"></div>
         <div class="form-group"><label class="form-label">Cantidad</label><input type="number" class="form-input" id="regCantidad" value="1" min="1" oninput="calcTotal()"></div>
         <div class="form-group"><label class="form-label">Precio unitario (S/)</label><input type="number" class="form-input" id="regPrecio" value="0" step="0.01" oninput="calcTotal()"></div>
         <div class="form-group"><label class="form-label">Total (S/)</label><div class="total-display" id="regTotal">S/ 0.00</div></div>
@@ -349,14 +349,14 @@ function renderInventario(){
   const search=document.getElementById('invSearch').value.toLowerCase();
   let f=productos.filter(p=>(catActiva==='Todos'||p.categoria===catActiva)&&(!search||p.nombre.toLowerCase().includes(search)||(p.categoria||'').toLowerCase().includes(search)));
   document.getElementById('totalProductos').textContent=productos.length;
-  document.getElementById('valorInventario').textContent='S/ '+productos.reduce((s,p)=>s+(p.precio||0)*(p.stock||0),0).toFixed(2);
-  document.getElementById('stockBajo').textContent=productos.filter(p=>p.stock>0&&p.stock<p.min).length;
-  document.getElementById('sinStock').textContent=productos.filter(p=>p.stock===0).length;
+  document.getElementById('valorInventario').textContent='S/ '+productos.reduce((s,p)=>s+(p.precio||0)*(p.existencias||0),0).toFixed(2);
+  document.getElementById('stockBajo').textContent=productos.filter(p=>p.existencias>0&&p.existencias<p.stock_min).length;
+  document.getElementById('sinStock').textContent=productos.filter(p=>p.existencias===0).length;
   const tb=document.getElementById('inventarioBody');
   if(!f.length){tb.innerHTML='<tr><td colspan="8"><div class="empty">No se encontraron productos</div></td></tr>';return;}
   tb.innerHTML=f.map((p,i)=>{
-    let e,ec;if(p.stock===0){e='Sin stock';ec='badge-out';}else if(p.stock<p.min){e='Stock bajo';ec='badge-low';}else{e='OK';ec='badge-ok';}
-    return`<tr><td class="td-num" style="color:var(--text3)">${i+1}</td><td class="td-bold">${p.nombre}</td><td><span class="badge badge-cat">${p.categoria||''}</span></td><td class="td-num">S/ ${(p.precio||0).toFixed(2)}</td><td class="td-num td-bold">${p.stock||0}</td><td class="td-num" style="color:var(--text3)">${p.min||1}</td><td><span class="badge ${ec}">${e}</span></td><td><div style="display:flex;gap:4px;"><button class="btn btn-ghost btn-icon btn-sm" onclick="openEditProductModal(${p.id})" title="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-ghost btn-icon btn-sm" onclick="confirmarEliminarProducto(${p.id})" title="Eliminar" style="color:var(--red);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button></div></td></tr>`;
+    let e,ec;if(p.existencias===0){e='Sin stock';ec='badge-out';}else if(p.stock<p.min){e='Stock bajo';ec='badge-low';}else{e='OK';ec='badge-ok';}
+    return`<tr><td class="td-num" style="color:var(--text3)">${i+1}</td><td class="td-bold">${p.nombre}</td><td><span class="badge badge-cat">${p.categoria||''}</span></td><td class="td-num">S/ ${(p.precio||0).toFixed(2)}</td><td class="td-num td-bold">${p.existencias||0}</td><td class="td-num" style="color:var(--text3)">${p.stock_min||1}</td><td><span class="badge ${ec}">${e}</span></td><td><div style="display:flex;gap:4px;"><button class="btn btn-ghost btn-icon btn-sm" onclick="openEditProductModal(${p.id})" title="Editar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><button class="btn btn-ghost btn-icon btn-sm" onclick="confirmarEliminarProducto(${p.id})" title="Eliminar" style="color:var(--red);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></button></div></td></tr>`;
   }).join('');
 }
 
@@ -384,7 +384,7 @@ function renderMovimientos(){
 
 function clearMovFilters(){['filtroTipo','filtroCat','filtroDesde','filtroHasta','movSearch'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});renderMovimientos();}
 function updateCatSelects(){const o=categorias.map(c=>`<option value="${c}">${c}</option>`).join('');['regCat','mpCat','emCat'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=o;});}
-function filterProductosByCat(){const cat=document.getElementById('regCat').value,sel=document.getElementById('regProducto'),f=cat?productos.filter(p=>p.categoria===cat):productos;sel.innerHTML='<option value="">— Seleccionar producto —</option>'+f.map(p=>`<option value="${p.nombre}" data-precio="${p.precio}" data-stock="${p.stock}">${p.nombre} (stock: ${p.stock})</option>`).join('');}
+function filterProductosByCat(){const cat=document.getElementById('regCat').value,sel=document.getElementById('regProducto'),f=cat?productos.filter(p=>p.categoria===cat):productos;sel.innerHTML='<option value="">— Seleccionar producto —</option>'+f.map(p=>`<option value="${p.nombre}" data-precio="${p.precio}" data-stock="${p.existencias}">${p.nombre} (stock: ${p.existencias})</option>`).join('');}
 function onProductoChange(){
   const opt=document.getElementById('regProducto').selectedOptions[0];
   if(opt&&opt.dataset.precio){
@@ -395,35 +395,52 @@ function onProductoChange(){
     else al.style.display='none';
   }
 }
-function onTipoChange(){onProductoChange();}
+function onTipoChange(){
+  const tipo=document.getElementById('regTipo').value;
+  const sel=document.getElementById('regProducto');
+  const txt=document.getElementById('regDescGasto');
+  if(tipo==='GASTO'){
+    sel.style.display='none';txt.style.display='block';
+    const cat=document.getElementById('regCat');
+    if(cat && ['Marketing','Operativo'].includes(cat.value)==false) cat.value=categorias.includes('Marketing')?'Marketing':categorias[0]||'';
+    document.getElementById('registrarAlert').style.display='none';
+  } else {
+    sel.style.display='block';txt.style.display='none';
+    onProductoChange();
+  }
+}
 function calcTotal(){const c=parseFloat(document.getElementById('regCantidad').value)||0,p=parseFloat(document.getElementById('regPrecio').value)||0;document.getElementById('regTotal').textContent='S/ '+(c*p).toFixed(2);}
 function calcEmTotal(){const c=parseFloat(document.getElementById('emCant').value)||0,p=parseFloat(document.getElementById('emPrecio').value)||0;document.getElementById('emTotal').textContent='S/ '+(c*p).toFixed(2);}
-function updateStockProducto(){document.getElementById('stockProducto').innerHTML=productos.map(p=>`<option value="${p.id}">${p.nombre} (stock: ${p.stock})</option>`).join('');}
+function updateStockProducto(){document.getElementById('stockProducto').innerHTML=productos.map(p=>`<option value="${p.id}">${p.nombre} (stock: ${p.existencias})</option>`).join('');}
 
 async function guardarMovimiento(){
-  const fecha=document.getElementById('regFecha').value,tipo=document.getElementById('regTipo').value,cat=document.getElementById('regCat').value,desc=document.getElementById('regProducto').value,cant=parseInt(document.getElementById('regCantidad').value)||1,precio=parseFloat(document.getElementById('regPrecio').value)||0,notas=document.getElementById('regNotas').value;
-  if(!fecha||!desc){showToast('Completa todos los campos','error');return;}
+  const fecha=document.getElementById('regFecha').value,tipo=document.getElementById('regTipo').value,cat=document.getElementById('regCat').value;
+  const desc=tipo==='GASTO'?document.getElementById('regDescGasto').value:document.getElementById('regProducto').value;
+  const cant=parseInt(document.getElementById('regCantidad').value)||1,precio=parseFloat(document.getElementById('regPrecio').value)||0,notas=document.getElementById('regNotas').value;
+  if(!fecha){showToast('Ingresa la fecha','error');return;}
+  if(!desc&&tipo!=='GASTO'){showToast('Selecciona un producto','error');return;}
+  if(!desc&&tipo==='GASTO'){showToast('Ingresa una descripción','error');return;}
   try{await sPost('movimientos',{fecha,tipo,descripcion:desc,categoria:cat,cantidad:cant,precio,total:cant*precio,notas});showToast('Movimiento guardado ✓','success');limpiarFormReg();await loadMovimientos();renderMovimientos();}
   catch(e){showToast('Error al guardar','error');}
 }
-function limpiarFormReg(){setToday();document.getElementById('regTipo').value='VENTA';document.getElementById('regCantidad').value='1';document.getElementById('regPrecio').value='0';document.getElementById('regNotas').value='';document.getElementById('regTotal').textContent='S/ 0.00';document.getElementById('registrarAlert').style.display='none';filterProductosByCat();}
+function limpiarFormReg(){setToday();document.getElementById('regTipo').value='VENTA';document.getElementById('regDescGasto').value='';document.getElementById('regDescGasto').style.display='none';document.getElementById('regProducto').style.display='block';document.getElementById('regCantidad').value='1';document.getElementById('regPrecio').value='0';document.getElementById('regNotas').value='';document.getElementById('regTotal').textContent='S/ 0.00';document.getElementById('registrarAlert').style.display='none';filterProductosByCat();}
 
 async function actualizarStock(){
   const id=document.getElementById('stockProducto').value,modo=document.getElementById('stockModo').value,val=parseInt(document.getElementById('stockValor').value)||0,prod=productos.find(p=>p.id==id);
   if(!prod)return;
   const ns=modo==='set'?val:modo==='add'?prod.stock+val:Math.max(0,prod.stock-val);
-  try{await sPatch('productos',id,{stock:ns});prod.stock=ns;showToast(`Stock actualizado a ${ns} ✓`,'success');renderInventario();updateStockProducto();filterProductosByCat();}
+  try{await sPatch('productos',id,{existencias:ns});prod.stock=ns;showToast(`Stock actualizado a ${ns} ✓`,'success');renderInventario();updateStockProducto();filterProductosByCat();}
   catch(e){showToast('Error al actualizar stock','error');}
 }
 
 function openNewProductModal(){editProdId=null;document.getElementById('modalProductoTitle').textContent='Nuevo producto';['mpNombre','mpPrecio','mpStock'].forEach(id=>document.getElementById(id).value='');document.getElementById('mpMin').value='1';updateCatSelects();openModal('modalProducto');}
-function openEditProductModal(id){editProdId=id;const p=productos.find(x=>x.id===id);document.getElementById('modalProductoTitle').textContent='Editar producto';document.getElementById('mpNombre').value=p.nombre;document.getElementById('mpPrecio').value=p.precio;document.getElementById('mpStock').value=p.stock;document.getElementById('mpMin').value=p.min;updateCatSelects();document.getElementById('mpCat').value=p.categoria;openModal('modalProducto');}
+function openEditProductModal(id){editProdId=id;const p=productos.find(x=>x.id===id);document.getElementById('modalProductoTitle').textContent='Editar producto';document.getElementById('mpNombre').value=p.nombre;document.getElementById('mpPrecio').value=p.precio;document.getElementById('mpStock').value=p.existencias;document.getElementById('mpMin').value=p.stock_min;updateCatSelects();document.getElementById('mpCat').value=p.categoria;openModal('modalProducto');}
 async function guardarProducto(){
   const nombre=document.getElementById('mpNombre').value.trim(),cat=document.getElementById('mpCat').value,precio=parseFloat(document.getElementById('mpPrecio').value)||0,stock=parseInt(document.getElementById('mpStock').value)||0,min=parseInt(document.getElementById('mpMin').value)||1;
   if(!nombre){showToast('El nombre es requerido','error');return;}
   try{
-    if(!editProdId)await sPost('productos',{nombre,categoria:cat,precio,stock,min});
-    else await sPatch('productos',editProdId,{nombre,categoria:cat,precio,stock,min});
+    if(!editProdId)await sPost('productos',{nombre,categoria:cat,precio,existencias:stock,stock_min:min});
+    else await sPatch('productos',editProdId,{nombre,categoria:cat,precio,existencias:stock,stock_min:min});
     showToast(editProdId?'Producto actualizado ✓':'Producto agregado ✓','success');
     closeModal('modalProducto');await loadProductos();renderCatTabs();renderInventario();updateCatSelects();filterProductosByCat();updateStockProducto();
   }catch(e){showToast('Error al guardar producto','error');}
