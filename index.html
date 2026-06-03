@@ -312,7 +312,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
 });
 
 function setToday(){document.getElementById('regFecha').value=new Date().toISOString().split('T')[0];}
-function loadCatsFromStorage(){const s=localStorage.getItem('nova_cats');categorias=s?JSON.parse(s):['Apple','Salud','JBL','Marketing','Operativo','Otro'];}
+function loadCatsFromStorage(){const s=localStorage.getItem('nova_cats');const parsed=s?JSON.parse(s):['Apple','Salud','JBL','Marketing','Operativo','Otro'];categorias=parsed.filter(c=>c&&c.trim()!=='');}
 function saveCatsToStorage(){localStorage.setItem('nova_cats',JSON.stringify(categorias));}
 
 async function loadProductos(){productos=await sGet('productos','order=id.asc');productos.forEach(p=>{if(p.categoria&&!categorias.includes(p.categoria)){categorias.push(p.categoria);saveCatsToStorage();}});}
